@@ -14,6 +14,10 @@ object ExampleService {
     "" -> rootService
   )
 
+  def health(implicit executionContext: ExecutionContext = ExecutionContext.global): HttpService = HttpService {
+    case GET -> Root => Ok("alive")
+  }
+
   def rootService(implicit executionContext: ExecutionContext) = HttpService {
     case req @ GET -> Root =>
       Ok("index")

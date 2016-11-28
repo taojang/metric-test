@@ -1,0 +1,50 @@
+
+# basic information for generating and executing this definition
+SenzaInfo:
+  StackName: metric-test
+  Parameters:
+    - ImageVersion:
+        Description: "Docker image version of metric-test."
+
+# a list of senza components to apply to the definition
+SenzaComponents:
+
+  # this basic configuration is required for the other components
+  - Configuration:
+      Type: Senza::StupsAutoConfiguration # auto-detect network setup
+
+  # will create a launch configuration and auto scaling group with scaling triggers
+  - AppServer:
+      Type: Senza::TaupageAutoScalingGroup
+      InstanceType: t2.micro
+      SecurityGroups:
+        - app-metric-test
+      IamRoles:
+        - app-metric-test
+      ElasticLoadBalancer: AppLoadBalancer
+      AssociatePublicIpAddress: false # change for standalone deployment in default VPC
+      TaupageConfig:
+        appdynamics_application: "Metric-Test - Test"
+        appdynamics_account_name: testing
+        appdynamics_account_access_key: bd67ddd8-efef-4316-82e9-7dc72c4bf8d5
+        appdynamics_account_globalname: testing_4630e5e5-7aed-4961-94ef-5af03cf0b83b
+        appdynamics_machineagent_tiername: metric-test
+        application_version: "{{Arguments.ImageVersion}}"
+        runtime: Docker
+        networking: host
+        source: "pierone.stups.zalan.do/glitch/metric-test:{{Arguments.ImageVersion}}"
+        health_check_path: /http4s/health
+        ports:
+          8080: 8080
+        mint_bucket: "zalando-stups-mint-741989400610-eu-central-1"
+
+  # creates an ELB entry and Route53 domains to this ELB
+  - AppLoadBalancer:
+      Type: Senza::WeightedDnsElasticLoadBalancer
+      HTTPPort: 8080
+      HealthCheckPath: /http4s/health
+      SecurityGroups:
+        - app-metric-test-lb
+      MainDomain: "{{SenzaInfo.StackName}}.glitch-test.zalan.do"
+      VersionDomain: "{{SenzaInfo.StackName}}-{{SenzaInfo.StackVersion}}.glitch-test.zalan.do"
+      Scheme: internet-facing
